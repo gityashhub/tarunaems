@@ -17,7 +17,7 @@ const initializeEmailService = () => {
 
   try {
     transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
+      host: 'smtp.googlemail.com', // Sometimes more reliable on cloud networks
       port: 587,
       secure: false, // Use TLS
       auth: {
@@ -27,15 +27,17 @@ const initializeEmailService = () => {
       tls: {
         rejectUnauthorized: false
       },
-      // Force IPv4 is often needed on cloud providers like Render
-      connectionTimeout: 30000,
-      greetingTimeout: 30000,
-      socketTimeout: 30000,
-      debug: true, // Enable debug logs
-      logger: true // Log to console
+      // FORCE IPv4: This is the most common fix for Render timeouts
+      // Google sometimes blocks cloud IPv6 ranges
+      family: 4,
+      connectionTimeout: 40000,
+      greetingTimeout: 40000,
+      socketTimeout: 60000,
+      debug: true,
+      logger: true
     });
 
-    console.log('✅ Email service initialized (Target: smtp.gmail.com:587)');
+    console.log('✅ Email service initialized (Force IPv4, Port 587)');
     return true;
   } catch (error) {
     console.error('❌ Failed to initialize email service:', error.message);
