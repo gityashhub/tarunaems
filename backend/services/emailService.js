@@ -20,22 +20,22 @@ const initializeEmailService = () => {
       host: 'smtp.gmail.com',
       port: 587,
       secure: false, // Use TLS
-      pool: true, // Reuse connections
-      maxConnections: 5,
-      maxMessages: 100,
       auth: {
         user: adminEmail,
         pass: adminPassword
       },
       tls: {
-        rejectUnauthorized: false // Helps with some cloud network cert issues
+        rejectUnauthorized: false
       },
-      connectionTimeout: 20000, // 20 seconds
-      greetingTimeout: 20000,
-      socketTimeout: 30000
+      // Force IPv4 is often needed on cloud providers like Render
+      connectionTimeout: 30000,
+      greetingTimeout: 30000,
+      socketTimeout: 30000,
+      debug: true, // Enable debug logs
+      logger: true // Log to console
     });
 
-    console.log('✅ Email service initialized with SMTP Pool (Port 587)');
+    console.log('✅ Email service initialized (Target: smtp.gmail.com:587)');
     return true;
   } catch (error) {
     console.error('❌ Failed to initialize email service:', error.message);
@@ -643,12 +643,15 @@ const sendConsolidatedTaskStatusEmail = async (sections) => {
       replyTo: adminEmail,
       subject: `Consolidated Task Status Report [${formatDateIST(new Date())}]`,
       html: summaryHtml,
+      // Removed PDF attachment temporarily to debug connection timeout
+      /*
       attachments: [
         {
           filename: `Consolidated_Task_Status_Report_${formatDateIST(new Date()).replace(/[^\w\s-]/g, '')}.pdf`,
           path: pdfPath
         }
       ]
+      */
     };
 
     await transporter.sendMail(mailOptions);
