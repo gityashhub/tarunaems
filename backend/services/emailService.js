@@ -18,18 +18,24 @@ const initializeEmailService = () => {
   try {
     transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true, // true for 465, false for other ports
+      port: 587,
+      secure: false, // Use TLS
+      pool: true, // Reuse connections
+      maxConnections: 5,
+      maxMessages: 100,
       auth: {
         user: adminEmail,
         pass: adminPassword
       },
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 10000,
-      socketTimeout: 10000
+      tls: {
+        rejectUnauthorized: false // Helps with some cloud network cert issues
+      },
+      connectionTimeout: 20000, // 20 seconds
+      greetingTimeout: 20000,
+      socketTimeout: 30000
     });
 
-    console.log('✅ Email service initialized with SMTP (Port 465)');
+    console.log('✅ Email service initialized with SMTP Pool (Port 587)');
     return true;
   } catch (error) {
     console.error('❌ Failed to initialize email service:', error.message);
