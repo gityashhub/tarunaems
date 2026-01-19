@@ -1,79 +1,56 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 
-// Create transporter based on environment
-const createTransporter = () => {
-  // Use SMTP if credentials are provided in .env
-  if (process.env.EMAIL_FROM && process.env.EMAIL_PASSWORD && process.env.EMAIL_FROM !== 'your-email@gmail.com') {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_FROM,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
-  } else {
-    // Development fallback - use Ethereal Email for testing
-    return nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.ETHEREAL_USER || 'ethereal.user@ethereal.email',
-        pass: process.env.ETHEREAL_PASS || 'ethereal.pass',
-      },
-    });
+// Initialize SendGrid
+const initSendGrid = () => {
+  if (process.env.SENDGRID_API_KEY) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    return true;
   }
+  return false;
 };
 
+initSendGrid();
+
 /**
- * Send email utility function
+ * Send email utility function via SendGrid
  */
 export const sendEmail = async ({ to, subject, html, text, fromName }) => {
   try {
-    const transporter = createTransporter();
+    const adminEmail = process.env.EMAIL_FROM || 'noreply@company.com';
 
-    const mailOptions = {
+    if (!process.env.SENDGRID_API_KEY) {
+      console.warn('⚠️ SendGrid API Key missing. Falling back to local logging.');
+      console.log(`📧 [MOCK] Email to: ${to}, Subject: ${subject}`);
+      return { success: true, message: 'Mock email sent' };
+    }
+
+    const msg = {
+      to,
       from: {
         name: fromName || 'CompanyName EMS',
-        address: process.env.EMAIL_FROM || 'noreply@company.com',
+        email: adminEmail,
       },
-      to,
       subject,
       html,
       text: text || html.replace(/<[^>]*>/g, ''), // Fallback plain text
     };
 
-    console.log(`📧 Attempting to send email to: ${to}`);
-    console.log(`📧 Subject: ${subject}`);
+    console.log(`📧 Attempting to send email via SendGrid to: ${to}`);
 
-    const info = await transporter.sendMail(mailOptions);
+    const [response] = await sgMail.send(msg);
 
-    console.log('✅ Email sent successfully:', info.messageId);
-
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🔗 Preview URL:', nodemailer.getTestMessageUrl(info));
-    }
+    console.log('✅ Email sent successfully via SendGrid. Status:', response.statusCode);
 
     return {
       success: true,
-      messageId: info.messageId,
-      previewUrl:
-        process.env.NODE_ENV !== 'production'
-          ? nodemailer.getTestMessageUrl(info)
-          : null,
+      statusCode: response.statusCode
     };
   } catch (error) {
-    console.error('❌ Email sending error:', error);
-    console.error('❌ Error details:', {
-      to,
-      subject,
-      error: error.message,
-      code: error.code,
-      command: error.command
-    });
+    console.error('❌ SendGrid Email error:', error);
+    if (error.response) {
+      console.error('❌ Error body:', error.response.body);
+    }
 
-    // Don't throw error in production to prevent breaking the main flow
-    // Instead return a failure result
     return {
       success: false,
       error: error.message,

@@ -1,46 +1,25 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
-let transporter = null;
 let adminEmail = null;
 
 const initializeEmailService = () => {
   adminEmail = process.env.EMAIL_FROM;
-  const adminPassword = process.env.EMAIL_PASSWORD;
+  const sendgridApiKey = process.env.SENDGRID_API_KEY;
 
-  if (!adminEmail || !adminPassword) {
-    console.warn('⚠️  Email service not configured. Set ADMIN_SYSTEM_EMAIL and ADMIN_SYSTEM_PASSWORD environment variables.');
+  if (!sendgridApiKey) {
+    console.warn('⚠️  SendGrid API Key not configured. Emails will fail on production.');
     return false;
   }
 
   try {
-    transporter = nodemailer.createTransport({
-      host: 'smtp.googlemail.com', // Sometimes more reliable on cloud networks
-      port: 587,
-      secure: false, // Use TLS
-      auth: {
-        user: adminEmail,
-        pass: adminPassword
-      },
-      tls: {
-        rejectUnauthorized: false
-      },
-      // FORCE IPv4: This is the most common fix for Render timeouts
-      // Google sometimes blocks cloud IPv6 ranges
-      family: 4,
-      connectionTimeout: 40000,
-      greetingTimeout: 40000,
-      socketTimeout: 60000,
-      debug: true,
-      logger: true
-    });
-
-    console.log('✅ Email service initialized (Force IPv4, Port 587)');
+    sgMail.setApiKey(sendgridApiKey);
+    console.log('✅ SendGrid Email Service initialized');
     return true;
   } catch (error) {
-    console.error('❌ Failed to initialize email service:', error.message);
+    console.error('❌ Failed to initialize SendGrid:', error.message);
     return false;
   }
 };
@@ -341,18 +320,18 @@ const sendTaskStatusEmail = async (employee, tasks, dayBook = null) => {
       </html>
     `;
 
-    const mailOptions = {
+    const msg = {
+      to: 'vrundafadadu@gmail.com',
       from: {
         name: `${employee.personalInfo?.firstName || ''} ${employee.personalInfo?.lastName || ''}`,
-        address: adminEmail
+        email: adminEmail
       },
-      to: 'vrundafadadu@gmail.com',
       replyTo: employeeEmail,
       subject: `Daily Task Status Report - ${employee.personalInfo?.firstName || 'Employee'} [${formatDateIST(new Date())}]`,
       html: htmlContent
     };
 
-    await transporter.sendMail(mailOptions);
+    await sgMail.send(msg);
     const istTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
     console.log(`✅ [${istTime}] Email sent successfully for employee: ${employee.personalInfo?.firstName} ${employee.personalInfo?.lastName}`);
     return true;
@@ -636,30 +615,19 @@ const sendConsolidatedTaskStatusEmail = async (sections) => {
     const pdfPath = await generateConsolidatedTasksPDF(sections);
     const recipient = process.env.TASK_REPORT_RECIPIENT || 'vrundafadadu@gmail.com';
 
-    const mailOptions = {
+    const msg = {
+      to: recipient,
       from: {
         name: 'CompanyName EMS',
-        address: adminEmail
+        email: adminEmail
       },
-      to: recipient,
       replyTo: adminEmail,
       subject: `Consolidated Task Status Report [${formatDateIST(new Date())}]`,
-      html: summaryHtml,
-      // Removed PDF attachment temporarily to debug connection timeout
-      /*
-      attachments: [
-        {
-          filename: `Consolidated_Task_Status_Report_${formatDateIST(new Date()).replace(/[^\w\s-]/g, '')}.pdf`,
-          path: pdfPath
-        }
-      ]
-      */
+      html: summaryHtml
+      // PDF attachment temporarily disabled for SendGrid debugging
     };
 
-    await transporter.sendMail(mailOptions);
-    try {
-      fs.unlinkSync(pdfPath);
-    } catch { }
+    await sgMail.send(msg);
     const istTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
     console.log(`✅ [${istTime}] Consolidated report email sent | Employees: ${totalEmployees} | Tasks: ${totalTasks}`);
     return true;
