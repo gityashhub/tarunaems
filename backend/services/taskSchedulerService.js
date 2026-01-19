@@ -20,8 +20,8 @@ const startTaskStatusScheduler = async () => {
      */
     const scheduleTimes = [
       {
-        time: '*/20 * * * * *',
-        name: 'Every 20 Seconds'
+        time: '*/1 * * * *',
+        name: 'Every 1 Minute'
       },
       {
         time: '0 22 * * *',
@@ -166,7 +166,7 @@ const stopTaskStatusScheduler = () => {
 const getSchedulerStatus = () => ({
   isRunning: schedulerStarted,
   jobCount: scheduledJobs.length,
-  frequency: 'Every 20 Seconds & Daily at 10:00 PM IST',
+  frequency: 'Every 1 Minute & Daily at 10:00 PM IST',
   recipient: process.env.TASK_REPORT_RECIPIENT || 'vrundafadadu@gmail.com',
   timezone: 'Asia/Kolkata'
 });
