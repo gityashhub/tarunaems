@@ -244,7 +244,7 @@ export const sendDayBookReportEmail = async (dayBook, employee, tasks) => {
 
   const htmlContent = createEmailTemplate(emailContent, `Day Book Report - ${employee.personalInfo.firstName}`);
 
-  const reportEmail = "vrundafadadu@gmail.com";
+  const reportEmail = "vrunda1414@gmail.com";
 
   return await sendEmail({
     to: reportEmail,
@@ -285,7 +285,7 @@ export const sendTaskAssignmentEmail = async (task, assignedTo, assignedBy) => {
 
   const htmlContent = createEmailTemplate(emailContent, 'New Task Assignment');
 
-  const reportEmail = "vrundafadadu@gmail.com";
+  const reportEmail = "vrunda1414@gmail.com";
 
   return await sendEmail({
     to: reportEmail,
