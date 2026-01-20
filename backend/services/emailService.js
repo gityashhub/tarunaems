@@ -37,10 +37,6 @@ const formatDateIST = (date) => {
 };
 
 const sendTaskStatusEmail = async (employee, tasks, dayBook = null) => {
-  if (!transporter) {
-    console.warn('⚠️  Email service not initialized. Cannot send email.');
-    return false;
-  }
 
   try {
     const employeeEmail = employee.workInfo?.email || employee.email;
@@ -549,10 +545,6 @@ const generateConsolidatedTasksPDF = async (sections) => {
 };
 
 const sendConsolidatedTaskStatusEmail = async (sections) => {
-  if (!transporter) {
-    console.warn('⚠️  Email service not initialized. Cannot send email.');
-    return false;
-  }
 
   try {
     const allTasks = sections.flatMap(s => s.tasks);
@@ -612,6 +604,8 @@ const sendConsolidatedTaskStatusEmail = async (sections) => {
       </html>
     `;
 
+    const pdfPath = await generateConsolidatedTasksPDF(sections);
+    const pdfAttachment = fs.readFileSync(pdfPath).toString('base64');
     const recipient = process.env.TASK_REPORT_RECIPIENT || 'vrunda1414@gmail.com';
 
     const msg = {
@@ -622,11 +616,21 @@ const sendConsolidatedTaskStatusEmail = async (sections) => {
       },
       replyTo: adminEmail,
       subject: `Consolidated Task Status Report [${formatDateIST(new Date())}]`,
-      html: summaryHtml
-      // PDF attachment temporarily disabled for SendGrid debugging
+      html: summaryHtml,
+      attachments: [
+        {
+          content: pdfAttachment,
+          filename: `Consolidated_Task_Status_Report.pdf`,
+          type: 'application/pdf',
+          disposition: 'attachment'
+        }
+      ]
     };
 
     await sgMail.send(msg);
+    try {
+      fs.unlinkSync(pdfPath);
+    } catch (e) { }
     const istTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
     console.log(`✅ [${istTime}] Consolidated report email sent | Employees: ${totalEmployees} | Tasks: ${totalTasks}`);
     return true;
